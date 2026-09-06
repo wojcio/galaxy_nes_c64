@@ -50,47 +50,7 @@
     8-BIT NINTENDO CLONE • STEROWANIE WASD + SPACJA • AUDIO CHIPTUNE
   </footer>
 
-  <script type="module">
-    import { Game, CANVAS_WIDTH, CANVAS_HEIGHT } from './js/game.js';
-
-    const canvas = document.getElementById('gameCanvas');
-    const game = new Game(canvas);
-
-    // CRT Toggle
-    const btnCrt = document.getElementById('btnCrt');
-    const crtOverlay = document.getElementById('crtOverlay');
-    let crtEnabled = true;
-
-    btnCrt.addEventListener('click', () => {
-      crtEnabled = !crtEnabled;
-      crtOverlay.style.display = crtEnabled ? 'block' : 'none';
-      btnCrt.textContent = `CRT: ${crtEnabled ? 'ON' : 'OFF'}`;
-    });
-
-    // Sound Toggle
-    const btnSound = document.getElementById('btnSound');
-    btnSound.addEventListener('click', () => {
-      game.audio.init();
-      const isMuted = game.audio.toggleMute();
-      btnSound.textContent = `DŹWIĘK: ${isMuted ? 'OFF' : 'ON'}`;
-    });
-
-    // Main 60FPS Game Loop
-    let lastTime = 0;
-    const targetFps = 60;
-    const interval = 1000 / targetFps;
-
-    function gameLoop(time) {
-      requestAnimationFrame(gameLoop);
-      const delta = time - lastTime;
-      if (delta > interval) {
-        lastTime = time - (delta % interval);
-        game.update();
-        game.draw();
-      }
-    }
-
-    requestAnimationFrame(gameLoop);
-  </script>
+  <!-- Zero-CORS standalone script running seamlessly on both file:// and http:// -->
+  <script src="galaxy-standalone.js"></script>
 </body>
 </html>
