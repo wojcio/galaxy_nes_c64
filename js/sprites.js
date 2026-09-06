@@ -355,6 +355,86 @@ export const SPRITE_DATA = {
     "....WW..........",
     "....WW..........",
     "................"
+  ],
+
+  // Power-Up Capsules (12x12 8-bit retro badges)
+  capsuleR: [
+    "..YYYYYYYY..",
+    ".YYYYYYYYYY.",
+    "YY..RRRR..YY",
+    "YY..R...R.YY",
+    "YY..RRRR..YY",
+    "YY..R..R..YY",
+    "YY..R...R.YY",
+    "YY..R...R.YY",
+    ".YYYYYYYYYY.",
+    "..YYYYYYYY.."
+  ],
+
+  capsuleM: [
+    "..RRRRRRRR..",
+    ".RRRRRRRRRR.",
+    "RR..WW..WW.RR",
+    "RR..WWW.WW.RR",
+    "RR..WW.WWW.RR",
+    "RR..WW..WW.RR",
+    "RR..WW..WW.RR",
+    "RR..WW..WW.RR",
+    ".RRRRRRRRRR.",
+    "..RRRRRRRR.."
+  ],
+
+  capsuleH: [
+    "..PPPPPPPP..",
+    ".PPPPPPPPPP.",
+    "PP..CC..CC.PP",
+    "PP..CC..CC.PP",
+    "PP..CCCCCC.PP",
+    "PP..CC..CC.PP",
+    "PP..CC..CC.PP",
+    "PP..CC..CC.PP",
+    ".PPPPPPPPPP.",
+    "..PPPPPPPP.."
+  ],
+
+  capsuleS: [
+    "..CCCCCCCC..",
+    ".CCCCCCCCCC.",
+    "CC..WWWWWW.CC",
+    "CC..WW.....CC",
+    "CC...WWWW..CC",
+    "CC......WW.CC",
+    "CC..WWWWWW.CC",
+    "CC.........CC",
+    ".CCCCCCCCCC.",
+    "..CCCCCCCC.."
+  ],
+
+  // Missiles
+  missile: [
+    "...RR...",
+    "..RRRR..",
+    "..WWWW..",
+    "..WWWW..",
+    "..WWWW..",
+    "..DDDD..",
+    ".DDDDDD.",
+    ".DD..DD.",
+    "..YYYY..",
+    "...OO..."
+  ],
+
+  hyperRocket: [
+    "...PP...",
+    "..PPPP..",
+    "..CCCC..",
+    "..CCCC..",
+    "..CCCC..",
+    "..CCCC..",
+    "..DDDD..",
+    ".DDDDDD.",
+    "..YYYY..",
+    ".OOOOOO."
   ]
 };
 

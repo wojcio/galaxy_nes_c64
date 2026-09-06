@@ -333,6 +333,86 @@
       "....WW..........",
       "....WW..........",
       "................"
+    ],
+
+    // Power-Up Capsules (12x12 8-bit retro badges)
+    capsuleR: [
+      "..YYYYYYYY..",
+      ".YYYYYYYYYY.",
+      "YY..RRRR..YY",
+      "YY..R...R.YY",
+      "YY..RRRR..YY",
+      "YY..R..R..YY",
+      "YY..R...R.YY",
+      "YY..R...R.YY",
+      ".YYYYYYYYYY.",
+      "..YYYYYYYY.."
+    ],
+
+    capsuleM: [
+      "..RRRRRRRR..",
+      ".RRRRRRRRRR.",
+      "RR..WW..WW.RR",
+      "RR..WWW.WW.RR",
+      "RR..WW.WWW.RR",
+      "RR..WW..WW.RR",
+      "RR..WW..WW.RR",
+      "RR..WW..WW.RR",
+      ".RRRRRRRRRR.",
+      "..RRRRRRRR.."
+    ],
+
+    capsuleH: [
+      "..PPPPPPPP..",
+      ".PPPPPPPPPP.",
+      "PP..CC..CC.PP",
+      "PP..CC..CC.PP",
+      "PP..CCCCCC.PP",
+      "PP..CC..CC.PP",
+      "PP..CC..CC.PP",
+      "PP..CC..CC.PP",
+      ".PPPPPPPPPP.",
+      "..PPPPPPPP.."
+    ],
+
+    capsuleS: [
+      "..CCCCCCCC..",
+      ".CCCCCCCCCC.",
+      "CC..WWWWWW.CC",
+      "CC..WW.....CC",
+      "CC...WWWW..CC",
+      "CC......WW.CC",
+      "CC..WWWWWW.CC",
+      "CC.........CC",
+      ".CCCCCCCCCC.",
+      "..CCCCCCCC.."
+    ],
+
+    // Missiles
+    missile: [
+      "...RR...",
+      "..RRRR..",
+      "..WWWW..",
+      "..WWWW..",
+      "..WWWW..",
+      "..DDDD..",
+      ".DDDDDD.",
+      ".DD..DD.",
+      "..YYYY..",
+      "...OO..."
+    ],
+
+    hyperRocket: [
+      "...PP...",
+      "..PPPP..",
+      "..CCCC..",
+      "..CCCC..",
+      "..CCCC..",
+      "..CCCC..",
+      "..DDDD..",
+      ".DDDDDD.",
+      "..YYYY..",
+      ".OOOOOO."
     ]
   };
 
@@ -727,6 +807,58 @@
       osc.start(t);
       osc.stop(t + 0.08);
     }
+
+    playPowerup() {
+      if (!this.initialized || this.isMuted || !this.ctx) return;
+      const t = this.ctx.currentTime + 0.02;
+      const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51];
+      notes.forEach((freq, idx) => {
+        const start = t + idx * 0.06;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(freq, start);
+        gain.gain.setValueAtTime(0.25, start);
+        gain.gain.exponentialRampToValueAtTime(0.01, start + 0.12);
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(start);
+        osc.stop(start + 0.12);
+      });
+    }
+
+    playMissileLaunch() {
+      if (!this.initialized || this.isMuted || !this.ctx) return;
+      const t = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(160, t);
+      osc.frequency.exponentialRampToValueAtTime(680, t + 0.16);
+      gain.gain.setValueAtTime(0.22, t);
+      gain.gain.linearRampToValueAtTime(0.01, t + 0.16);
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start(t);
+      osc.stop(t + 0.16);
+    }
+
+    playShieldDeflect() {
+      if (!this.initialized || this.isMuted || !this.ctx) return;
+      const t = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(900, t);
+      osc.frequency.setValueAtTime(450, t + 0.05);
+      osc.frequency.setValueAtTime(1200, t + 0.09);
+      gain.gain.setValueAtTime(0.32, t);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start(t);
+      osc.stop(t + 0.2);
+    }
   }
 
   // --- STARFIELD ---
@@ -858,6 +990,10 @@
 
       this.player = null;
       this.playerBullets = [];
+      this.missiles = [];
+      this.powerups = [];
+      this.smokeParticles = [];
+      this.shieldFlashTimer = 0;
       this.enemies = [];
       this.enemyBullets = [];
       this.explosions = [];
@@ -926,7 +1062,9 @@
         height: 16,
         speed: 2.5,
         invulnerableTimer: 90,
-        alive: true
+        alive: true,
+        weapon: 'NORMAL', // 'NORMAL', 'RAPID', 'MISSILES', 'HYPER'
+        shield: 0 // Number of shield hits absorbed
       };
     }
 
@@ -936,6 +1074,9 @@
       this.stage = 1;
       this.playerBullets = [];
       this.enemyBullets = [];
+      this.missiles = [];
+      this.powerups = [];
+      this.smokeParticles = [];
       this.explosions = [];
       this.floatingTexts = [];
       this.resetPlayer();
@@ -948,6 +1089,7 @@
       this.stateTimer = 0;
       this.playerBullets = [];
       this.enemyBullets = [];
+      this.missiles = [];
       this.diveInterval = Math.max(45, 120 - (this.stage * 10));
       this.spawnFormation();
       this.audio.playStartJingle();
@@ -1061,27 +1203,95 @@
       enemy.diveVy = Math.max(1.8, Math.sin(angle) * baseSpeed);
     }
 
+    checkEnemyDrop(x, y, isDiving) {
+      const chance = isDiving ? 0.40 : 0.18;
+      if (Math.random() < chance) {
+        const types = ['RAPID', 'MISSILES', 'HYPER', 'SHIELD'];
+        const type = types[Math.floor(Math.random() * types.length)];
+        this.powerups.push({
+          x: Math.floor(x + 2),
+          y: Math.floor(y + 2),
+          type: type,
+          vy: 0.95,
+          width: 12,
+          height: 12,
+          wobble: Math.random() * Math.PI * 2
+        });
+      }
+    }
+
     shootPlayerLaser() {
       if (!this.player.alive) return;
-      if (this.playerBullets.length >= 4) return;
 
       const bulletY = this.player.y - 4;
-      this.playerBullets.push({
-        x: this.player.x + 3,
-        y: bulletY,
-        width: 2,
-        height: 8,
-        speed: 6.5
-      });
-      this.playerBullets.push({
-        x: this.player.x + 11,
-        y: bulletY,
-        width: 2,
-        height: 8,
-        speed: 6.5
-      });
+      const wpn = this.player.weapon;
 
-      this.audio.playShoot();
+      if (wpn === 'NORMAL') {
+        if (this.playerBullets.length >= 4) return;
+        this.playerBullets.push({ x: this.player.x + 3, y: bulletY, width: 2, height: 8, speed: 6.5 });
+        this.playerBullets.push({ x: this.player.x + 11, y: bulletY, width: 2, height: 8, speed: 6.5 });
+        this.audio.playShoot();
+        this.shootCooldown = 12;
+      } else if (wpn === 'RAPID') {
+        // Quad stream laser at double fire rate!
+        if (this.playerBullets.length >= 12) return;
+        this.playerBullets.push({ x: this.player.x - 3, y: bulletY, width: 2, height: 8, speed: 7.5 });
+        this.playerBullets.push({ x: this.player.x + 3, y: bulletY - 2, width: 2, height: 8, speed: 7.5 });
+        this.playerBullets.push({ x: this.player.x + 11, y: bulletY - 2, width: 2, height: 8, speed: 7.5 });
+        this.playerBullets.push({ x: this.player.x + 17, y: bulletY, width: 2, height: 8, speed: 7.5 });
+        this.audio.playShoot();
+        this.shootCooldown = 6;
+      } else if (wpn === 'MISSILES') {
+        // Dual laser + twin homing missiles!
+        if (this.playerBullets.length < 4) {
+          this.playerBullets.push({ x: this.player.x + 3, y: bulletY, width: 2, height: 8, speed: 6.5 });
+          this.playerBullets.push({ x: this.player.x + 11, y: bulletY, width: 2, height: 8, speed: 6.5 });
+          this.audio.playShoot();
+        }
+        if (this.missiles.length < 4) {
+          this.missiles.push({
+            x: this.player.x - 4,
+            y: this.player.y + 4,
+            vx: -1.2,
+            vy: -3.5,
+            width: 8,
+            height: 10,
+            type: 'HOMING',
+            hp: 1
+          });
+          this.missiles.push({
+            x: this.player.x + 12,
+            y: this.player.y + 4,
+            vx: 1.2,
+            vy: -3.5,
+            width: 8,
+            height: 10,
+            type: 'HOMING',
+            hp: 1
+          });
+          this.audio.playMissileLaunch();
+        }
+        this.shootCooldown = 13;
+      } else if (wpn === 'HYPER') {
+        // 4 Hyper Plasma Rockets spread!
+        if (this.missiles.length < 6) {
+          const angles = [-0.22, -0.07, 0.07, 0.22];
+          for (let ang of angles) {
+            this.missiles.push({
+              x: this.player.x + 4 + ang * 24,
+              y: bulletY,
+              vx: Math.sin(ang) * 6.8,
+              vy: -Math.cos(ang) * 6.8,
+              width: 8,
+              height: 10,
+              type: 'HYPER',
+              hp: 2
+            });
+          }
+          this.audio.playMissileLaunch();
+        }
+        this.shootCooldown = 11;
+      }
     }
 
     shootEnemyBullet(enemy) {
@@ -1128,6 +1338,8 @@
       if (!this.player.alive || this.player.invulnerableTimer > 0) return;
 
       this.player.alive = false;
+      this.player.weapon = 'NORMAL';
+      this.player.shield = 0;
       this.addExplosion(this.player.x, this.player.y, true);
       this.audio.playPlayerDeath();
 
@@ -1143,13 +1355,57 @@
         this.shootCooldown--;
       }
 
+      if (this.shieldFlashTimer > 0) {
+        this.shieldFlashTimer--;
+      }
+
       if (this.state === 'PLAYING') {
         if (this.keys.spaceJustPressed || (this.keys.space && this.shootCooldown === 0)) {
           this.shootPlayerLaser();
-          this.shootCooldown = 12;
         }
       }
       this.keys.spaceJustPressed = false;
+
+      // Update power-up drops
+      for (let i = this.powerups.length - 1; i >= 0; i--) {
+        const p = this.powerups[i];
+        p.y += p.vy;
+        p.wobble += 0.05;
+        p.x += Math.sin(p.wobble) * 0.6;
+
+        // Check player collection
+        if (this.player.alive) {
+          if (
+            p.x < this.player.x + this.player.width &&
+            p.x + p.width > this.player.x &&
+            p.y < this.player.y + this.player.height &&
+            p.y + p.height > this.player.y
+          ) {
+            this.audio.playPowerup();
+            this.score += 200;
+
+            if (p.type === 'SHIELD') {
+              this.player.shield = Math.min(3, this.player.shield + 2);
+              this.addFloatingScore(this.player.x - 6, this.player.y - 10, 'SHIELD UP!');
+            } else {
+              this.player.weapon = p.type;
+              const names = {
+                RAPID: 'RAPID FIRE!',
+                MISSILES: 'MISSILES!',
+                HYPER: 'HYPER ROCKETS!'
+              };
+              this.addFloatingScore(this.player.x - 14, this.player.y - 10, names[p.type] || 'POWER UP!');
+            }
+
+            this.powerups.splice(i, 1);
+            continue;
+          }
+        }
+
+        if (p.y > CANVAS_HEIGHT + 15) {
+          this.powerups.splice(i, 1);
+        }
+      }
 
       switch (this.state) {
         case 'STAGE_INTRO':
@@ -1342,6 +1598,7 @@
     }
 
     updateProjectiles() {
+      // 1. Player Lasers
       for (let i = this.playerBullets.length - 1; i >= 0; i--) {
         const b = this.playerBullets[i];
         b.y -= b.speed;
@@ -1350,6 +1607,67 @@
         }
       }
 
+      // 2. Player Missiles
+      for (let i = this.missiles.length - 1; i >= 0; i--) {
+        const m = this.missiles[i];
+
+        // Smoke trails
+        if (this.tick % 2 === 0) {
+          this.smokeParticles.push({
+            x: m.x + m.width / 2 - 1 + (Math.random() - 0.5) * 2,
+            y: m.y + m.height,
+            life: 12,
+            color: (m.type === 'HYPER') ? NES_PALETTE['O'] : NES_PALETTE['W']
+          });
+        }
+
+        if (m.type === 'HOMING') {
+          // Seek closest enemy (prefer diving enemies)
+          let target = null;
+          let minDist = 999999;
+          for (let e of this.enemies) {
+            const bonus = (e.state === 'DIVING') ? 50 : 0;
+            const dist = Math.hypot(e.x - m.x, e.y - m.y) - bonus;
+            if (dist < minDist) {
+              minDist = dist;
+              target = e;
+            }
+          }
+
+          if (target) {
+            const tx = target.x + target.width / 2;
+            const ty = target.y + target.height / 2;
+            const targetAngle = Math.atan2(ty - m.y, tx - m.x);
+            const currentAngle = Math.atan2(m.vy, m.vx);
+            let diff = targetAngle - currentAngle;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            const newAngle = currentAngle + Math.max(-0.14, Math.min(0.14, diff));
+            const spd = 5.2;
+            m.vx = Math.cos(newAngle) * spd;
+            m.vy = Math.sin(newAngle) * spd;
+          }
+        }
+
+        m.x += m.vx;
+        m.y += m.vy;
+
+        if (m.y < -20 || m.x < -20 || m.x > CANVAS_WIDTH + 20 || m.y > CANVAS_HEIGHT + 20) {
+          this.missiles.splice(i, 1);
+        }
+      }
+
+      // 3. Smoke Particles
+      for (let i = this.smokeParticles.length - 1; i >= 0; i--) {
+        const sp = this.smokeParticles[i];
+        sp.life--;
+        sp.y += 0.3;
+        if (sp.life <= 0) {
+          this.smokeParticles.splice(i, 1);
+        }
+      }
+
+      // 4. Enemy Bullets
       for (let i = this.enemyBullets.length - 1; i >= 0; i--) {
         const eb = this.enemyBullets[i];
         eb.x += eb.vx;
@@ -1361,6 +1679,7 @@
     }
 
     checkCollisions() {
+      // 1. Player Bullets vs Enemies
       for (let bi = this.playerBullets.length - 1; bi >= 0; bi--) {
         const b = this.playerBullets[bi];
         let bulletHit = false;
@@ -1382,6 +1701,7 @@
               this.score += pts;
               this.addFloatingScore(enemy.x, enemy.y, `+${pts}`);
               this.addExplosion(enemy.x, enemy.y, enemy.type === ENEMY_TYPES.BOSS);
+              this.checkEnemyDrop(enemy.x, enemy.y, isDiving);
               this.enemies.splice(ei, 1);
             } else {
               this.score += 50;
@@ -1396,6 +1716,47 @@
         }
       }
 
+      // 2. Player Missiles vs Enemies
+      for (let mi = this.missiles.length - 1; mi >= 0; mi--) {
+        const m = this.missiles[mi];
+        let missileHit = false;
+
+        for (let ei = this.enemies.length - 1; ei >= 0; ei--) {
+          const enemy = this.enemies[ei];
+          if (
+            m.x < enemy.x + enemy.width &&
+            m.x + m.width > enemy.x &&
+            m.y < enemy.y + enemy.height &&
+            m.y + m.height > enemy.y
+          ) {
+            missileHit = true;
+            const dmg = (m.type === 'HYPER') ? 2 : 1;
+            enemy.hp -= dmg;
+            this.addExplosion(enemy.x, enemy.y, true);
+
+            if (enemy.hp <= 0) {
+              const isDiving = enemy.state === 'DIVING' || enemy.state === 'RETURNING';
+              const pts = isDiving ? Math.floor(enemy.type.pointsDiving * 1.5) : enemy.type.pointsFormation;
+              this.score += pts;
+              this.addFloatingScore(enemy.x, enemy.y, `+${pts}`);
+              this.checkEnemyDrop(enemy.x, enemy.y, isDiving);
+              this.enemies.splice(ei, 1);
+            } else {
+              this.score += 50;
+              this.audio.playHit();
+            }
+
+            m.hp--;
+            if (m.hp <= 0) break;
+          }
+        }
+
+        if (missileHit && m.hp <= 0) {
+          this.missiles.splice(mi, 1);
+        }
+      }
+
+      // 3. Enemy Bullets vs Player
       if (this.player.alive && this.player.invulnerableTimer <= 0) {
         const px = this.player.x + 2;
         const py = this.player.y + 2;
@@ -1411,21 +1772,41 @@
             eb.y + eb.height > py
           ) {
             this.enemyBullets.splice(i, 1);
-            this.killPlayer();
-            break;
+
+            // Shield deflection
+            if (this.player.shield > 0) {
+              this.player.shield--;
+              this.audio.playShieldDeflect();
+              this.addFloatingScore(this.player.x - 8, this.player.y - 8, 'DEFLECTED!');
+              this.shieldFlashTimer = 12;
+            } else {
+              this.killPlayer();
+              break;
+            }
           }
         }
 
+        // 4. Enemy Ship vs Player Ship
         if (this.player.alive) {
-          for (let enemy of this.enemies) {
+          for (let ei = this.enemies.length - 1; ei >= 0; ei--) {
+            const enemy = this.enemies[ei];
             if (
               enemy.x < px + pw &&
               enemy.x + enemy.width > px &&
               enemy.y < py + ph &&
               enemy.y + enemy.height > py
             ) {
-              this.killPlayer();
-              break;
+              if (this.player.shield > 0) {
+                this.player.shield--;
+                this.audio.playShieldDeflect();
+                this.addExplosion(enemy.x, enemy.y, true);
+                this.addFloatingScore(this.player.x - 8, this.player.y - 8, 'DEFLECTED!');
+                this.shieldFlashTimer = 12;
+                this.enemies.splice(ei, 1);
+              } else {
+                this.killPlayer();
+                break;
+              }
             }
           }
         }
@@ -1438,6 +1819,31 @@
 
       // 1. Starfield
       this.starfield.draw(this.ctx);
+
+      // 1.5 Smoke Particles
+      for (let sp of this.smokeParticles) {
+        this.ctx.fillStyle = sp.color || NES_PALETTE['W'];
+        this.ctx.fillRect(Math.floor(sp.x), Math.floor(sp.y), 2, 2);
+      }
+
+      // 1.8 Power-Up Drops (Floating Capsules)
+      for (let p of this.powerups) {
+        let sprName = 'capsuleR';
+        if (p.type === 'MISSILES') sprName = 'capsuleM';
+        else if (p.type === 'HYPER') sprName = 'capsuleH';
+        else if (p.type === 'SHIELD') sprName = 'capsuleS';
+
+        const spr = this.sprites.get(sprName, 0);
+        if (spr) {
+          this.ctx.drawImage(spr, Math.floor(p.x), Math.floor(p.y));
+        }
+
+        // Retro blinking outline
+        if (this.tick % 8 < 4) {
+          this.ctx.strokeStyle = NES_PALETTE['W'];
+          this.ctx.strokeRect(Math.floor(p.x) - 0.5, Math.floor(p.y) - 0.5, 13, 13);
+        }
+      }
 
       // 2. Explosions
       for (let exp of this.explosions) {
@@ -1474,12 +1880,27 @@
         this.ctx.fillRect(Math.floor(eb.x + 1), Math.floor(eb.y + 1), 1, eb.height - 2);
       }
 
-      // 5. Player Bullets
+      // 5. Player Bullets (Lasers)
       for (let b of this.playerBullets) {
-        this.ctx.fillStyle = NES_PALETTE['C'];
+        const isRapid = (this.player && this.player.weapon === 'RAPID');
+        this.ctx.fillStyle = isRapid ? NES_PALETTE['y'] : NES_PALETTE['C'];
         this.ctx.fillRect(Math.floor(b.x), Math.floor(b.y), b.width, b.height);
         this.ctx.fillStyle = NES_PALETTE['W'];
         this.ctx.fillRect(Math.floor(b.x), Math.floor(b.y), b.width, 2);
+      }
+
+      // 5.5 Player Missiles / Rockets
+      for (let m of this.missiles) {
+        const sprName = (m.type === 'HYPER') ? 'hyperRocket' : 'missile';
+        const spr = this.sprites.get(sprName, 0);
+        if (spr) {
+          this.ctx.save();
+          this.ctx.translate(Math.floor(m.x + m.width / 2), Math.floor(m.y + m.height / 2));
+          const angle = Math.atan2(m.vy, m.vx) + Math.PI / 2;
+          this.ctx.rotate(angle);
+          this.ctx.drawImage(spr, -m.width / 2, -m.height / 2);
+          this.ctx.restore();
+        }
       }
 
       // 6. Player Ship
@@ -1490,6 +1911,27 @@
           const spr = this.sprites.get('player', flameFrame);
           if (spr) {
             this.ctx.drawImage(spr, Math.floor(this.player.x), Math.floor(this.player.y));
+          }
+
+          // 6.5 Force Field / Shield Energy Barrier
+          if (this.player.shield > 0) {
+            const cx = Math.floor(this.player.x + 8);
+            const cy = Math.floor(this.player.y + 8);
+            const radius = 14 + Math.sin(this.tick * 0.2) * 1.5;
+            const points = 12;
+            const rot = this.tick * 0.08;
+
+            const shieldColor = (this.shieldFlashTimer > 0)
+              ? NES_PALETTE['W']
+              : ((this.tick % 6 < 3) ? NES_PALETTE['C'] : NES_PALETTE['W']);
+
+            this.ctx.fillStyle = shieldColor;
+            for (let i = 0; i < points; i++) {
+              const ang = rot + (i / points) * Math.PI * 2;
+              const px = Math.floor(cx + Math.cos(ang) * radius);
+              const py = Math.floor(cy + Math.sin(ang) * radius);
+              this.ctx.fillRect(px, py, 2, 2);
+            }
           }
         }
       }
@@ -1517,12 +1959,36 @@
     }
 
     drawHUD() {
-      this.drawText('1UP', 24, 8, NES_PALETTE['R'], 8);
-      this.drawText(this.formatScore(this.score), 18, 18, NES_PALETTE['W'], 8);
+      // Top row: 1UP & HIGH SCORE
+      this.drawText('1UP', 20, 6, NES_PALETTE['R'], 8);
+      this.drawText(this.formatScore(this.score), 16, 16, NES_PALETTE['W'], 8);
 
-      this.drawText('HIGH SCORE', CANVAS_WIDTH / 2 - 36, 8, NES_PALETTE['R'], 8);
-      this.drawText(this.formatScore(this.highScore), CANVAS_WIDTH / 2 - 16, 18, NES_PALETTE['W'], 8);
+      this.drawText('HIGH SCORE', CANVAS_WIDTH / 2 - 36, 6, NES_PALETTE['R'], 8);
+      this.drawText(this.formatScore(this.highScore), CANVAS_WIDTH / 2 - 16, 16, NES_PALETTE['W'], 8);
 
+      // Weapon and Shield indicators
+      const wpn = (this.player && this.player.weapon) || 'NORMAL';
+      const wpnLabels = {
+        NORMAL: 'LASER',
+        RAPID: 'RAPID',
+        MISSILES: 'MISSILE',
+        HYPER: 'HYPER'
+      };
+      const wpnColors = {
+        NORMAL: NES_PALETTE['C'],
+        RAPID: NES_PALETTE['y'],
+        MISSILES: NES_PALETTE['R'],
+        HYPER: NES_PALETTE['M']
+      };
+
+      this.drawText(`WPN:${wpnLabels[wpn]}`, 16, 26, wpnColors[wpn], 7);
+
+      if (this.player && this.player.shield > 0) {
+        const shieldIcons = '[]'.repeat(this.player.shield);
+        this.drawText(`SHIELD:${shieldIcons}`, CANVAS_WIDTH - 100, 26, NES_PALETTE['C'], 7);
+      }
+
+      // Bottom row: Lives and Stage Flags
       for (let i = 0; i < this.lives - 1; i++) {
         const spr = this.sprites.get('player', 0);
         if (spr) {
