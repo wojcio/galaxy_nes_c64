@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GALAXY — Commodore 64 Edition</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --c64-darkblue: #40318D;
+      --c64-lightblue: #887ECB;
+      --c64-white: #FFFFFF;
+      --c64-border: #2A1F5E;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background: radial-gradient(circle at center, #1b1633 0%, #0d0a1a 100%);
+      color: #ffffff;
+      font-family: 'Press Start 2P', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .c64-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: linear-gradient(145deg, #2b254d, #191433);
+      padding: 20px;
+      border-radius: 16px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85);
+      border: 4px solid #4a3d80;
+      max-width: 100%;
+    }
+
+    .c64-header {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding: 8px 14px;
+      background: #141026;
+      border: 2px solid #5a4b99;
+      border-radius: 8px;
+    }
+
+    .c64-logo {
+      font-size: 13px;
+      color: #EEEE77;
+      text-shadow: 2px 2px 0px #880000;
+      letter-spacing: 2px;
+    }
+
+    .c64-badge {
+      font-size: 8px;
+      color: #AAFFEE;
+      background: #251d47;
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid #4b3d82;
+    }
+
+    .c64-monitor {
+      position: relative;
+      background: #000000;
+      border-radius: 12px;
+      padding: 12px;
+      box-shadow: inset 0 0 25px rgba(0, 0, 0, 0.9), 0 0 20px rgba(136, 126, 203, 0.25);
+      border: 3px solid #3d326b;
+      overflow: hidden;
+    }
+
+    #c64Canvas {
+      display: block;
+      width: 576px;
+      height: 396px;
+      image-rendering: pixelated;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: crisp-edges;
+      background: #000000;
+      cursor: crosshair;
+    }
+
+    @media (max-width: 650px) {
+      #c64Canvas {
+        width: 384px;
+        height: 264px;
+      }
+    }
+
+    .c64-controls-bar {
+      width: 100%;
+      margin-top: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .badge-info {
+      font-size: 8px;
+      background: #141026;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid #3c3066;
+      color: #AAFFEE;
+    }
+
+    .keycap {
+      background: #2f255c;
+      color: #fff;
+      padding: 3px 6px;
+      border-radius: 4px;
+      border-bottom: 2px solid #161130;
+      margin-right: 4px;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn-c64 {
+      background: #2b2354;
+      border: 1px solid #6454a8;
+      color: #ffffff;
+      font-family: inherit;
+      font-size: 8px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .btn-c64:hover {
+      background: #3e3378;
+      border-color: #AAFFEE;
+      color: #AAFFEE;
+      transform: translateY(-1px);
+    }
+
+    .btn-c64:active {
+      transform: translateY(1px);
+    }
+
+    .c64-footer {
+      margin-top: 16px;
+      font-size: 8px;
+      color: #776ea6;
+      text-align: center;
+      letter-spacing: 1px;
+    }
+
+    .c64-footer a {
+      color: #AAFFEE;
+      text-decoration: none;
+    }
+
+    .c64-footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="c64-container">
+    <header class="c64-header">
+      <div class="c64-logo">★ GALAXY — COMMODORE 64 ★</div>
+      <div class="c64-badge">MOS 6510 • SID 6581 • VIC-II</div>
+    </header>
+
+    <div class="c64-monitor">
+      <canvas id="c64Canvas" width="384" height="264"></canvas>
+    </div>
+
+    <div class="c64-controls-bar">
+      <div class="badge-info">
+        <span class="keycap">W</span><span class="keycap">A</span><span class="keycap">S</span><span class="keycap">D</span>
+        <span>RUCH</span>
+      </div>
+
+      <div class="badge-info">
+        <span class="keycap">SPACJA</span>
+        <span>STRZAŁ / JOY FIRE</span>
+      </div>
+
+      <div class="btn-group">
+        <a href="galaxy.prg" download="galaxy.prg" class="btn-c64" title="Pobierz plik wykonywalny Commodore 64">
+          💾 POBIERZ .PRG
+        </a>
+        <a href="galaxy.d64" download="galaxy.d64" class="btn-c64" title="Pobierz obraz dyskietki 1541">
+          💽 POBIERZ .D64
+        </a>
+        <a href="index.html" class="btn-c64" style="border-color: #F83800;" title="Wróć do wersji NES">
+          🕹️ WERSJA NES
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <footer class="c64-footer">
+    PLIK KOMPATYBILNY Z EMULATORAMI VICE (x64sc), VIRTUALC64 ORAZ PRAWDZIWYM SPRZĘTEM C64<br>
+    <span style="color:#EEEE77;">URUCHAMIANIE W TERMINALU:</span> <code>x64sc galaxy.prg</code>
+  </footer>
+
+  <script src="c64.js"></script>
+</body>
+</html>
