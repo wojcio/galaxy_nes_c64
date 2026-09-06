@@ -79,3 +79,39 @@ Dźwięk jest generowany w czasie rzeczywistym bezpośrednio przez Web Audio API
    - Motyl: 80 pkt (w szyku) / 160 pkt (w locie pikującym)
    - Boss: 150 pkt (w szyku) / 400 pkt (w locie pikującym)
 5. **Progresja fal (Stages)**: Kolejne etapy zwiększają agresję, prędkość pikowania i częstotliwość strzałów wroga.
+
+---
+
+## ⚡ Zrzuty Uzbrojenia i Ulepszenia (Power-ups)
+
+Zestrzelenie nurkujących wrogów daje szansę na upuszczenie kapsuły ze specjalną bronią:
+- **[R] Rapid Fire**: Podwójna prędkość i potrójny magazynek pocisków.
+- **[M] Missiles**: Samonaprowadzające się rakiety namierzające najbliższych wrogów z efektem dymu.
+- **[H] Hyper Rockets**: Ciężkie rakiety niszczące całe kolumny wrogów z podwójną siłą.
+- **[S] Force Field**: Obracająca się tarcza energetyczna chroniąca statek przed trafieniami pocisków i bezpośrednim taranowaniem.
+
+---
+
+## 🕹️ COMMODORE 64 EDITION (VIC-II + SID 6581)
+
+Wersja dedykowana na komputer Commodore 64 dostępna jest w przeglądarce oraz jako natywny obraz dla prawdziwego C64 i emulatorów:
+
+- **Wersja przeglądarkowa**: [http://localhost:8080/c64.html](http://localhost:8080/c64.html) lub kliknij `c64.html`
+- **Wersja natywna MOS 6510**:
+  - Plik wykonywalny: [`galaxy.prg`](file:///Users/wojciechnowacki/Desktop/Devel/galaxy/galaxy.prg)
+  - Obraz dyskietki 1541: [`galaxy.d64`](file:///Users/wojciechnowacki/Desktop/Devel/galaxy/galaxy.d64)
+
+### Uruchamianie w emulatorze VICE:
+```bash
+# Uruchomienie bezpośrednio pliku PRG
+x64sc galaxy.prg
+
+# Lub zamontowanie dyskietki D64
+x64sc galaxy.d64
+```
+
+### Architektura wersji C64:
+- **Grafika VIC-II**: Sprity wielokolorowe 24x21 pikseli z oryginalną 16-kolorową paletą Pepto/VICE (brąz, błękity, żółcie, zieleń, czerwień).
+- **Dźwięk SID 6581**: Rezonansowy filtr dolnoprzepustowy, szum 12-bit LFSR (eksplozje), fala piłokształtna i trójkątna, słynne arpeggia w stylu Roba Hubbarda przy zbieraniu bonusów.
+- **Taktowanie PAL 50Hz**: Płynny, stały timestep 20ms uniezależniony od odświeżania monitora (eliminuje problem zbyt szybkiej gry na monitorach 120Hz/ProMotion).
+- **Pełna matryca kolizji**: Statek gracza niszczony jest zarówno przez wrogie pociski, jak i taranujące statki nurkujące (chyba że aktywna jest tarcza ochronna).

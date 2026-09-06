@@ -664,6 +664,35 @@ int main(void) {
             }
         }
 
+        // 7.5 Check enemy ship crashing into player ship (Diving Ramming Attack!)
+        for (i = 0; i < MAX_ENEMIES; ++i) {
+            if (enemies[i].active && enemies[i].state == 1) { // Diving
+                if (enemies[i].curY >= py - 1 && enemies[i].curY <= py + 1 &&
+                    enemies[i].curX + 2 >= px && enemies[i].curX <= px + 2) {
+
+                    if (playerShield > 0) {
+                        playerShield--;
+                        sid_shield();
+                        enemies[i].active = 0;
+                        putChar(enemies[i].curX, enemies[i].curY, '*', COLOR_YELLOW);
+                        putChar(enemies[i].curX + 1, enemies[i].curY, '#', COLOR_LIGHTRED);
+                        putChar(enemies[i].curX + 2, enemies[i].curY, '*', COLOR_YELLOW);
+                        draw_hud();
+                    } else {
+                        sid_explode();
+                        enemies[i].active = 0;
+                        lives--;
+                        playerWeapon = WPN_NORMAL;
+                        draw_hud();
+                        if (lives == 0) {
+                            running = 0;
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+
         // 8. Update Drop Capsule
         if (drop.active) {
             putChar(drop.x, drop.y, ' ', COLOR_BLACK);
@@ -710,13 +739,13 @@ int main(void) {
             }
         }
 
-        // C64 raster delay loop for smooth 50Hz/60Hz timing
-        for (i = 0; i < 180; ++i);
+        // Lock to VIC-II vertical blanking interval (authentic 50Hz PAL timing)
+        waitvsync();
     }
 
     // GAME OVER
     printText(15, 12, "GAME OVER", COLOR_RED);
-    printText(11, 14, "PRESS FIRE TO RESTART", COLOR_WHITE);
+    printText(9, 14, "PRESS FIRE TO RESTART", COLOR_WHITE);
     while (1) {
         joy = PEEK(CIA1_PRA);
         if (kbhit() || !(joy & 0x10)) break;
