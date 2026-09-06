@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GALAXY - 8-Bit NES Retro Arcade</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="arcade-container" id="arcadeCabinet">
+    <!-- Marquee Header -->
+    <header class="arcade-header">
+      <div class="logo-title">★ GALAXY ★</div>
+      <div class="sub-tag">NES 2A03 APU</div>
+    </header>
+
+    <!-- CRT Screen Frame -->
+    <div class="screen-wrapper">
+      <canvas id="gameCanvas" width="288" height="384"></canvas>
+      <div class="crt-overlay" id="crtOverlay"></div>
+    </div>
+
+    <!-- Controls & Action Panel -->
+    <div class="arcade-controls-bar">
+      <div class="instruction-badge">
+        <span class="keycap">W</span>
+        <span class="keycap">A</span>
+        <span class="keycap">S</span>
+        <span class="keycap">D</span>
+        <span>RUCH</span>
+      </div>
+
+      <div class="instruction-badge">
+        <span class="keycap">SPACJA</span>
+        <span>STRZAŁ</span>
+      </div>
+
+      <div class="control-buttons">
+        <button class="btn-arcade" id="btnCrt" title="Przełącz filtr CRT">CRT: ON</button>
+        <button class="btn-arcade" id="btnSound" title="Wycisz/Włącz dźwięk">DŹWIĘK: ON</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="arcade-footer">
+    8-BIT NINTENDO CLONE • STEROWANIE WASD + SPACJA • AUDIO CHIPTUNE
+  </footer>
+
+  <script type="module">
+    import { Game, CANVAS_WIDTH, CANVAS_HEIGHT } from './js/game.js';
+
+    const canvas = document.getElementById('gameCanvas');
+    const game = new Game(canvas);
+
+    // CRT Toggle
+    const btnCrt = document.getElementById('btnCrt');
+    const crtOverlay = document.getElementById('crtOverlay');
+    let crtEnabled = true;
+
+    btnCrt.addEventListener('click', () => {
+      crtEnabled = !crtEnabled;
+      crtOverlay.style.display = crtEnabled ? 'block' : 'none';
+      btnCrt.textContent = `CRT: ${crtEnabled ? 'ON' : 'OFF'}`;
+    });
+
+    // Sound Toggle
+    const btnSound = document.getElementById('btnSound');
+    btnSound.addEventListener('click', () => {
+      game.audio.init();
+      const isMuted = game.audio.toggleMute();
+      btnSound.textContent = `DŹWIĘK: ${isMuted ? 'OFF' : 'ON'}`;
+    });
+
+    // Main 60FPS Game Loop
+    let lastTime = 0;
+    const targetFps = 60;
+    const interval = 1000 / targetFps;
+
+    function gameLoop(time) {
+      requestAnimationFrame(gameLoop);
+      const delta = time - lastTime;
+      if (delta > interval) {
+        lastTime = time - (delta % interval);
+        game.update();
+        game.draw();
+      }
+    }
+
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>

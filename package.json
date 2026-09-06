@@ -1,0 +1,22 @@
+{
+  "name": "galaxy-8bit-retro",
+  "version": "1.0.0",
+  "description": "8-Bit Nintendo NES clone of Galaxy / Galaga with authentic APU chiptune sound synthesis",
+  "main": "index.html",
+  "scripts": {
+    "start": "python3 -m http.server 8080",
+    "serve": "npx serve -l 8080 ."
+  },
+  "keywords": [
+    "galaxy",
+    "galaga",
+    "galaxian",
+    "nes",
+    "8-bit",
+    "retrogaming",
+    "chiptune",
+    "web-audio"
+  ],
+  "author": "Antigravity",
+  "license": "MIT"
+}
