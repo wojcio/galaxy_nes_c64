@@ -111,7 +111,9 @@ x64sc galaxy.d64
 ```
 
 ### Architektura wersji C64:
-- **Grafika VIC-II**: Sprity wielokolorowe 24x21 pikseli z oryginalną 16-kolorową paletą Pepto/VICE (brąz, błękity, żółcie, zieleń, czerwień).
-- **Dźwięk SID 6581**: Rezonansowy filtr dolnoprzepustowy, szum 12-bit LFSR (eksplozje), fala piłokształtna i trójkątna, słynne arpeggia w stylu Roba Hubbarda przy zbieraniu bonusów.
-- **Taktowanie PAL 50Hz**: Płynny, stały timestep 20ms uniezależniony od odświeżania monitora (eliminuje problem zbyt szybkiej gry na monitorach 120Hz/ProMotion).
-- **Pełna matryca kolizji**: Statek gracza niszczony jest zarówno przez wrogie pociski, jak i taranujące statki nurkujące (chyba że aktywna jest tarcza ochronna).
+- **8 Sprzętowych Duszków VIC-II (MOB 0–7)**: Myśliwiec gracza, pole siłowe, lasery plazmowe, nurkujący bossowie/owady, bomby i eksplozje są w 100% renderowane sprzętowo w krzemie VIC-II ($D000–$D02E), zapewniając zero narzutu CPU i idealną płynność.
+- **Sprzętowy rejestr kolizji `$D01E`**: Detekcja kolizji duszek-duszek realizowana z subpikselową precyzją w krzemie.
+- **Własny zestaw znaków w RAM ($6800)**: Formacja obcych w Banku 1 ($4000–$7FFF) z dedykowaną pamięcią ekranu ($6000).
+- **Dźwięk SID 6581/8580**: Rezonansowy filtr dolnoprzepustowy, szum 12-bit LFSR (eksplozje), fala piłokształtna i trójkątna, słynne arpeggia w stylu Roba Hubbarda przy zbieraniu bonusów.
+- **Taktowanie PAL 50Hz i 8-cyklowy Galois LFSR**: Prawdziwa synchronizacja powrotu plamki kineskopu (VBLANK) i ultra-szybki generator liczb losowych gwarantujący stałe 50 FPS.
+- **Sterowanie**: Klawiatura (WASD + Spacja) oraz port dżojstika 2 ($DC00).
