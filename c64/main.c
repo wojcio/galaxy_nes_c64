@@ -447,6 +447,17 @@ static unsigned char formationSway = 0;
 static signed char formationDir = 1;
 static unsigned char formationNeedsRedraw = 1;
 
+// Running count of alive formation enemies (avoids an O(24) scan
+// every frame to detect a cleared wave).
+static unsigned char enemiesRemaining = 0;
+
+// Per-row lookup for laser-vs-formation collision: formation rows are
+// char rows 4, 6, 8, 10 and enemies are filled contiguously per row,
+// so [row_start[rg], row_start[rg] + row_count[rg]) covers that row.
+static const unsigned char row_orig[4] = {4, 6, 8, 10};
+static unsigned char row_start[4];
+static unsigned char row_count[4];
+
 // Stars (8 lightweight stars)
 static unsigned char star_x[MAX_STARS];
 static unsigned char star_y[MAX_STARS];
@@ -499,7 +510,30 @@ void init_formation(void) {
         }
     }
 
+    enemiesRemaining = MAX_ENEMIES;
+
+    // Build per-row lookup for the laser-vs-formation collision.
+    for (row = 0; row < 4; ++row) { row_start[row] = MAX_ENEMIES; row_count[row] = 0; }
+    for (i = 0; i < MAX_ENEMIES; ++i) {
+        unsigned char rg = (enemies[i].origRow - 4) / 2;
+        if (rg < 4) {
+            if (row_start[rg] == MAX_ENEMIES) row_start[rg] = i;
+            row_count[rg]++;
+        }
+    }
+
     formationNeedsRedraw = 1;
+}
+
+static void draw_enemy_side(unsigned char x, unsigned char y, const EnemyTile *e, unsigned char right) {
+    if (e->type == 2) {
+        unsigned char col = (e->hp == 2) ? COLOR_LIGHTGREEN : COLOR_LIGHTBLUE;
+        FAST_CHAR(x, y, right ? CH_BOSS_R : CH_BOSS_L, col);
+    } else if (e->type == 1) {
+        FAST_CHAR(x, y, right ? CH_BFLY_R : CH_BFLY_L, COLOR_LIGHTRED);
+    } else {
+        FAST_CHAR(x, y, right ? CH_BEE_R : CH_BEE_L, COLOR_YELLOW);
+    }
 }
 
 void draw_formation(void) {
@@ -508,31 +542,37 @@ void draw_formation(void) {
         if (enemies[i].active) {
             unsigned char x = enemies[i].origCol + formationSway;
             unsigned char y = enemies[i].origRow;
-
-            if (enemies[i].type == 2) {
-                FAST_CHAR(x, y, CH_BOSS_L, (enemies[i].hp == 2) ? COLOR_LIGHTGREEN : COLOR_LIGHTBLUE);
-                FAST_CHAR(x + 1, y, CH_BOSS_R, (enemies[i].hp == 2) ? COLOR_LIGHTGREEN : COLOR_LIGHTBLUE);
-            } else if (enemies[i].type == 1) {
-                FAST_CHAR(x, y, CH_BFLY_L, COLOR_LIGHTRED);
-                FAST_CHAR(x + 1, y, CH_BFLY_R, COLOR_LIGHTRED);
-            } else {
-                FAST_CHAR(x, y, CH_BEE_L, COLOR_YELLOW);
-                FAST_CHAR(x + 1, y, CH_BEE_R, COLOR_YELLOW);
-            }
+            draw_enemy_side(x, y, &enemies[i], 0);
+            draw_enemy_side(x + 1, y, &enemies[i], 1);
         }
     }
 }
 
-void clear_formation(void) {
+// Incremental sway: the formation moves +/-1 char per redraw, so only
+// the vacated column and the newly-covered column change per enemy
+// (the middle column just swaps its L/R half-tile). 5 POKEs per enemy
+// instead of 6 (clear 2 + draw 4).
+static void shift_formation(void) {
     unsigned char i;
+    signed char ns = formationSway + formationDir;
     for (i = 0; i < MAX_ENEMIES; ++i) {
         if (enemies[i].active) {
-            unsigned char x = enemies[i].origCol + formationSway;
             unsigned char y = enemies[i].origRow;
-            FAST_CLEAR(x, y);
-            FAST_CLEAR(x + 1, y);
+            unsigned char oc = enemies[i].origCol;
+            if (formationDir > 0) {
+                FAST_CLEAR(oc + formationSway, y);              // vacated left edge
+                draw_enemy_side(oc + ns, y, &enemies[i], 0);    // middle: R -> L
+                draw_enemy_side(oc + ns + 1, y, &enemies[i], 1);// new right edge
+            } else {
+                FAST_CLEAR(oc + formationSway + 1, y);          // vacated right edge
+                draw_enemy_side(oc + ns, y, &enemies[i], 0);    // new left edge
+                draw_enemy_side(oc + ns + 1, y, &enemies[i], 1);// middle: L -> R
+            }
         }
     }
+    formationSway = ns;
+    if (formationSway >= 4) formationDir = -1;
+    else if (formationSway <= 0) formationDir = 1;
 }
 
 // -------------------------------------------------------------
@@ -680,6 +720,7 @@ void trigger_dive(void) {
         for (i = 0; i < 4; ++i) {
             if (enemies[i].active) {
                 enemies[i].active = 0;
+                enemiesRemaining--;
                 FAST_CLEAR(enemies[i].origCol + formationSway, enemies[i].origRow);
                 FAST_CLEAR(enemies[i].origCol + formationSway + 1, enemies[i].origRow);
                 d1_active = 1;
@@ -697,6 +738,7 @@ void trigger_dive(void) {
         for (i = 4; i < MAX_ENEMIES; ++i) {
             if (enemies[i].active) {
                 enemies[i].active = 0;
+                enemiesRemaining--;
                 FAST_CLEAR(enemies[i].origCol + formationSway, enemies[i].origRow);
                 FAST_CLEAR(enemies[i].origCol + formationSway + 1, enemies[i].origRow);
                 d2_active = 1;
@@ -720,6 +762,18 @@ void trigger_explosion(unsigned int x, unsigned char y) {
     exp_x = x;
     exp_y = y;
     exp_timer = 16;
+}
+
+// -------------------------------------------------------------
+// DETERMINISTIC PAL 50Hz FRAME SYNC
+// -------------------------------------------------------------
+
+// Wait for a fixed raster line in the lower border. Polling a
+// specific line (not just bit 7 of $D011) makes frame timing
+// deterministic: the loop always resumes at the same beam position,
+// so a logic overrun can never stretch a frame to ~2x (25Hz stutter).
+static void wait_raster(unsigned char line) {
+    while (PEEK(0xD012) != line);
 }
 
 // -------------------------------------------------------------
@@ -809,6 +863,16 @@ int main(void) {
 
         while (running) {
             tick++;
+
+            // 0. Deterministic PAL 50Hz frame sync: wait for raster
+            // line 255 (lower border) and write all 8 sprite registers
+            // while the beam is off-screen. VIC-II latches sprite X/Y
+            // at the start of each raster line, so mid-screen writes
+            // would tear the sprites; polling a fixed line (instead of
+            // bit 7 of $D011) also stops a logic overrun from
+            // stretching a frame to ~2x (25Hz stutter).
+            wait_raster(255);
+            sync_hardware_sprites();
 
             // 1. Controls (Joy 2 or WASD direct matrix)
             joy = PEEK(CIA1_PRA);
@@ -908,12 +972,10 @@ int main(void) {
                 trigger_dive();
             }
 
-            // 9. Formation Swaying (Redraw only once every 12 frames!)
+            // 9. Formation Swaying (incremental: only vacated and
+            // newly-covered columns are rewritten, every 12 frames)
             if (tick % 12 == 0) {
-                clear_formation();
-                formationSway += formationDir;
-                if (formationSway >= 4) formationDir = -1;
-                else if (formationSway <= 0) formationDir = 1;
+                shift_formation();
                 formationNeedsRedraw = 1;
             }
             if (formationNeedsRedraw) {
@@ -984,54 +1046,51 @@ int main(void) {
             }
 
             // 11. Laser vs Formation (Check against character grid)
+            // Only the formation row the laser is on is scanned
+            // (4-8 enemies instead of all 24; skipped entirely when
+            // the laser is between formation rows).
             if (l1_active && l1_y < 138 && l1_y > 70) {
                 unsigned char cCol = (l1_x - 24) / 8;
                 unsigned char cRow = (l1_y - 50) / 8;
-                for (i = 0; i < MAX_ENEMIES; ++i) {
-                    if (enemies[i].active) {
-                        unsigned char ex = enemies[i].origCol + formationSway;
-                        unsigned char ey = enemies[i].origRow;
-                        if (ey == cRow && (cCol == ex || cCol == ex + 1)) {
-                            enemies[i].hp--;
-                            l1_active = 0;
-                            if (enemies[i].hp == 0) {
-                                enemies[i].active = 0;
-                                FAST_CLEAR(ex, ey);
-                                FAST_CLEAR(ex + 1, ey);
-                                trigger_explosion(24 + ex * 8, 50 + ey * 8);
-                                score += (enemies[i].type == 2) ? 150 : ((enemies[i].type == 1) ? 80 : 50);
-                                if (fast_rnd() % 5 == 0) playerShield = 2;
-                                draw_hud();
-                            } else {
-                                sid_laser();
+                unsigned char rg;
+                for (rg = 0; rg < 4; ++rg) {
+                    if (row_orig[rg] == cRow) {
+                        unsigned char start = row_start[rg];
+                        unsigned char cnt = row_count[rg];
+                        for (i = start; i < start + cnt; ++i) {
+                            if (enemies[i].active) {
+                                unsigned char ex = enemies[i].origCol + formationSway;
+                                if (cCol == ex || cCol == ex + 1) {
+                                    enemies[i].hp--;
+                                    l1_active = 0;
+                                    if (enemies[i].hp == 0) {
+                                        enemies[i].active = 0;
+                                        enemiesRemaining--;
+                                        FAST_CLEAR(ex, cRow);
+                                        FAST_CLEAR(ex + 1, cRow);
+                                        trigger_explosion(24 + ex * 8, 50 + cRow * 8);
+                                        score += (enemies[i].type == 2) ? 150 : ((enemies[i].type == 1) ? 80 : 50);
+                                        if (fast_rnd() % 5 == 0) playerShield = 2;
+                                        draw_hud();
+                                    } else {
+                                        sid_laser();
+                                    }
+                                    break;
+                                }
                             }
-                            break;
                         }
+                        break;
                     }
                 }
             }
 
-            // 12. Refresh All 8 Hardware Sprites (Takes ~20 CPU cycles!)
-            sync_hardware_sprites();
-
-            // 13. Check Wave Cleared
-            {
-                unsigned char remaining = 0;
-                for (i = 0; i < MAX_ENEMIES; ++i) {
-                    if (enemies[i].active) remaining++;
-                }
-                if (remaining == 0 && !d1_active && !d2_active) {
-                    stage++;
-                    sid_powerup();
-                    init_formation();
-                    draw_hud();
-                }
+            // 12. Check Wave Cleared (running counter, no per-frame scan)
+            if (enemiesRemaining == 0 && !d1_active && !d2_active) {
+                stage++;
+                sid_powerup();
+                init_formation();
+                draw_hud();
             }
-
-            // 14. PROPER PAL 50Hz VBLANK SYNCHRONIZATION
-            // Wait until raster enters vertical blank (scanline >= 256)
-            while ((PEEK(0xD011) & 0x80) == 0);
-            while ((PEEK(0xD011) & 0x80) != 0);
         }
 
         // GAME OVER
@@ -1040,8 +1099,7 @@ int main(void) {
         printText(9, 14, "PRESS FIRE TO RESTART", COLOR_WHITE);
 
         for (i = 0; i < 40; ++i) {
-            while ((PEEK(0xD011) & 0x80) == 0);
-            while ((PEEK(0xD011) & 0x80) != 0);
+            wait_raster(255);
         }
 
         while (1) {
